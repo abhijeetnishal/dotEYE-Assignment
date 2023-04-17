@@ -11,8 +11,9 @@
   "author": "Abhijeet",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "express-ws": "^5.0.2",
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "socket.io": "^4.6.1"
   }
 }
