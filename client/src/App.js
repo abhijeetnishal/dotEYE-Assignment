@@ -1,41 +1,71 @@
-import "./App.css";
+import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
-import { useEffect, useState } from "react";
 
-//connect socket server
-const socket = io.connect("http://localhost:4000");
+const ENDPOINT = "http://localhost:4000";
 
-function App() {
-  //Room State
-  const [room, setRoom] = useState("");
-
-  // Messages States
-  const [message, setMessage] = useState("");
-  const [messageReceived, setMessageReceived] = useState("");
-
-  const sendMessage = () => {
-    socket.emit("send_message", { message });
-  };
+const Quotes = () => {
+  const [quotes, setQuotes] = useState({});
+  const [average, setAverage] = useState(null);
+  const [slippage, setSlippage] = useState({});
 
   useEffect(() => {
-    socket.on("receive_message", (data) => {
-      setMessageReceived(data.message);
+    const socket = io(ENDPOINT);
+
+    socket.on("connect", () => {
+      console.log("Connected to server");
+      socket.emit("getQuotes");
+      socket.emit("getAverage");
+      socket.emit("getSlippage");
     });
-  }, [socket]);
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from server");
+    });
+
+    socket.on("quotes", (data) => {
+      console.log("Received quotes:", data);
+      setQuotes(data);
+    });
+
+    socket.on("average", (data) => {
+      console.log("Received average:", data);
+      setAverage(data.value);
+    });
+
+    socket.on("slippage", (data) => {
+      console.log("Received slippage:", data);
+      setSlippage(data);
+    });
+
+    return () => {
+      socket.disconnect();
+      console.log("Disconnected from server");
+    };
+  }, []);
 
   return (
-    <div className="App">
-      <input
-        placeholder="Message..."
-        onChange={(event) => {
-          setMessage(event.target.value);
-        }}
-      />
-      <button onClick={sendMessage}> Send Message</button>
-      <h1> Message:</h1>
-      {messageReceived}
+    <div>
+      {/* <h1>Quotes</h1>
+      <ul>
+        {quotes.map((quote, index) => (
+          <li key={index}>
+            {quote.}: {quote.} USD
+          </li>
+        ))}
+      </ul> */}
+      <h1>Average</h1>
+      {average !== null ? <p>Average Buy Price: {average.average_buy_price} USD</p> : <p>Loading...</p>}
+      {average !== null ? <p>Average Sell Price: {average.average_sell_price} USD</p> : <p>Loading...</p>}
+      <h1>Slippage</h1>
+      {/* <ul>
+        {slippage.map((slippageData) => (
+          <li key={slippageData}>
+            {slippageData}: {slippageData.slippage}
+          </li>
+        ))}
+      </ul> */}
     </div>
   );
-}
+};
 
-export default App;
+export default Quotes;
