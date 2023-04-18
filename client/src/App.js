@@ -3,17 +3,13 @@ import io from "socket.io-client";
 import './App.css'
 
 const ENDPOINT = "https://doteyeserver.onrender.com";
-const socket = io(ENDPOINT, {
-  cors: {
-    origin: '*',
-  }
-});
+const socket = io(ENDPOINT);
 
 
 const Quotes = () => {
-  const [quotes, setQuotes] = useState({});
+  const [quotes, setQuotes] = useState(null);
   const [average, setAverage] = useState(null);
-  const [slippage, setSlippage] = useState({});
+  const [slippage, setSlippage] = useState(null);
 
   useEffect(() => {
       socket.on("connect", () => {
@@ -22,34 +18,36 @@ const Quotes = () => {
         socket.emit("getAverage");
         socket.emit("getSlippage");
       });
+
+      const intervalId = setInterval(() => {
+
+        socket.on("quotes", (data) => {
+          //console.log("Received quotes:", data);
+          setQuotes(data);
+        });
+    
+        socket.on("average", (data) => {
+          //console.log("Received average:", data);
+          setAverage(data.value);
+        });
+    
+        socket.on("slippage", (data) => {
+          //console.log("Received slippage:", data);
+          setSlippage(data);
+        });
+    
+        return () => {
+          socket.disconnect();
+          console.log("Disconnected from server");
+        };
+     }, 500);
+    
+      return () => clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-
-      socket.on("quotes", (data) => {
-        //console.log("Received quotes:", data);
-        setQuotes(data);
-      });
-  
-      socket.on("average", (data) => {
-        //console.log("Received average:", data);
-        setAverage(data.value);
-      });
-  
-      socket.on("slippage", (data) => {
-        //console.log("Received slippage:", data);
-        setSlippage(data);
-      });
-  
-      return () => {
-        socket.disconnect();
-        console.log("Disconnected from server");
-      };
-   }, 500);
-  
-    return () => clearInterval(intervalId);
-  }, []);
+  // useEffect(() => {
+   
+  // }, []);
 
   return (
     <div className="app">

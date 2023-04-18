@@ -10,13 +10,12 @@ const cors = require("cors");
 
 const {getAllData, getAverage, getSlippage} = require('./controller/controller');
 
-app.use(cors({origin: ['https://doteyeassignment.vercel.app/','http://localhost:3000']}));
+app.use(cors({origin: ['https://doteyeassignment.vercel.app','http://localhost:3000']}));
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", 'https://doteyeassignment.vercel.app/'],
-    methods: ["GET", "POST","PUT","DELETE"],
-  },
+    origin: '*',
+  }
 });
 
 
@@ -28,16 +27,19 @@ io.on("connection", (socket) => {
       console.log("Client disconnected");
   });
   
+  //quotes endpoint
   socket.on("getQuotes", async () => {
       const data = await getAllData();
       socket.emit("quotes", data);
   });
   
+  //average endpoint
   socket.on("getAverage", async () => {
       const average = await getAverage();
       socket.emit("average", { value: average });
   });
   
+  //slippage endpoint
   socket.on("getSlippage", async () => {
       const slippageData = await getSlippage();
       socket.emit("slippage", slippageData);
