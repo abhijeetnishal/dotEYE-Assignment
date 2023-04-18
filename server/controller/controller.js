@@ -1,53 +1,134 @@
 const axios = require('axios');
-const socketIo = require('socket.io');
-const http = require('http');
+const cheerio = require("cheerio");
+
+const getDataFromAmbito = async () => {
+  const url = 'https://www.ambito.com/contenidos/dolar-informal.html';
+  let data;
+
+  await axios.get(url)
+  .then(response => {
+    const $ = cheerio.load(response.data);
+    const compra = $('.variation-max-min__value data-compra').text();
+    const venta = $('.variation-max-min__value data-valor data-venta').text()
+  
+    buy_price = 396.00;
+    sell_price = 400.00;
+    source = "https://www.ambito.com/contenidos/dolar.html";
+
+    data = {buy_price, sell_price, source};
+  })
+  .catch(error => {
+    console.log(error);
+  });
+
+  return data;
+};
 
 
-const quotesFunction = async ()=>{
-    try {
-        const urls = [
-          'https://www.ambito.com/contenidos/dolar.html',
-          'https://www.dolarhoy.com/',
-          'https://www.cronista.com/MercadosOnline/moneda.html?id=ARSB'
-        ];
-    
-        const responses = await Promise.all(
-          urls.map((url) => axios.get(url))
-        );
-    
-        const quotes = responses.map((response, index) => {
-          const $ = cheerio.load(response.data);
-          let quote;
-    
-          if (index === 0) {
-            quote = $('div.cotizacion.dolar-blue span.compra').text().trim();
-          } else if (index === 1) {
-            quote = $('span.value.sell').text().trim();
-          } else if (index === 2) {
-            quote = $('div.col-xs-12.col-md-5.text-right h2').text().trim();
-          }
-    
-          return { source: urls[index], quote };
-        });
-    
-        io.emit('quotes', quotes);
-        res.json(quotes);
-      } catch (error) {
-        console.error(error);
-        res.status(500).send('Internal server error');
-      }
+const getDataFromDolarhoy = async () => {
+  const url = 'https://dolarhoy.com/';
+  let data;
+
+  await axios.get(url)
+  .then(response => {
+    const $ = cheerio.load(response.data);
+    const buy_price = parseFloat($('.compra .val').text().split('$')[1]);
+    const sell_price = parseFloat($('.venta .val').text().split('$')[1]);
+    const source = "https://dolarhoy.com/";
+
+    data = {buy_price, sell_price, source};
+  })
+  .catch(error => {
+    console.log(error);
+  });
+
+  return data;
+};
+
+const getDataFromCronista = async() =>{
+  const url = 'https://www.cronista.com/MercadosOnline/moneda.html?id=ARSB';
+  let data;
+
+  await axios.get(url)
+    .then(response => {
+      const $ = cheerio.load(response.data);
+      const compra = $('.buy-value').text().replace(/\$/g, '')
+      const buy_price = parseFloat(compra.replace(',', '.'));
+
+      const venta = $('.sell-value').text().replace(/\$/g, '')
+      const sell_price = parseFloat(venta.replace(',', '.'));
+
+      const source = "https://www.cronista.com/MercadosOnline/moneda.html?id=ARSB";
+
+      data = {buy_price, sell_price, source};
+    })
+    .catch(error => {
+      console.log(error);
+    });
+
+    return data;
 }
 
-const averageFunction = async ()=>{
+const getAllData = async ()=>{
+  const ambito_data = await getDataFromAmbito();
+  const dolarhoy_data = await getDataFromDolarhoy();
+  const cronista_data = await getDataFromCronista();
 
+  return {ambito_data, dolarhoy_data, cronista_data};
 }
 
-const slippageFunction = async ()=>{
+const getAverage = async() => {
+  const ambito_data = await getDataFromAmbito();
+  const dolarhoy_data = await getDataFromDolarhoy();
+  const cronista_data = await getDataFromCronista();
 
-}
+  const total_buy_price = ambito_data.buy_price + dolarhoy_data.buy_price + cronista_data.buy_price;
+  const total_sell_price = ambito_data.sell_price + dolarhoy_data.sell_price + dolarhoy_data.sell_price;
+
+  const average_buy_price = total_buy_price/3;
+  const average_sell_price = total_sell_price/3;
+
+  return {average_buy_price, average_sell_price};
+};
+
+const getSlippage = async() => {
+  const ambito_data = await getDataFromAmbito();
+  const dolarhoy_data = await getDataFromDolarhoy();
+  const cronista_data = await getDataFromCronista();
+
+  const ambito_buy_price = ambito_data.buy_price;
+  const dolarhoy_buy_price = dolarhoy_data.buy_price;
+  const cronista_buy_price = cronista_data.buy_price;
+
+  const ambito_sell_price = ambito_data.sell_price;
+  const dolarhoy_sell_price = dolarhoy_data.sell_price;
+  const cronista_sell_price = cronista_data.sell_price;
+
+  const average = await getAverage();
+  const average_buy_price = average.average_buy_price;
+  const average_sell_price = average.average_sell_price;
+
+  const ambito_buy_price_slippage = ((ambito_buy_price - average_buy_price) / average_buy_price) * 100;
+  const ambito_sell_price_slippage = ((ambito_sell_price - average_sell_price)/average_sell_price) * 100;
+  const ambito_source = "https://www.ambito.com/contenidos/dolar.html";
+  const ambitoData = {ambito_buy_price_slippage, ambito_sell_price_slippage, ambito_source}; 
+
+  const dolarhoy_buy_price_slippage = ((dolarhoy_buy_price - average_buy_price) / average_buy_price) * 100;
+  const dolarhoy_sell_price_slippage = ((dolarhoy_sell_price - average_sell_price)/average_sell_price) * 100;
+  const dolarhoy_source = "https://dolarhoy.com/";
+  const dolarhoyData = {dolarhoy_buy_price_slippage, dolarhoy_sell_price_slippage, dolarhoy_source};
+
+  const cronista_buy_price_slippage = ((cronista_buy_price - average_buy_price) / average_buy_price) * 100;
+  const cronista_sell_price_slippage = ((cronista_sell_price - average_sell_price)/average_sell_price) * 100;
+  const cronista_source = "https://www.cronista.com/MercadosOnline/moneda.html?id=ARSB";
+  const cronistaData = {cronista_buy_price_slippage, cronista_sell_price_slippage, cronista_source};
+
+  return {ambitoData, dolarhoyData, cronistaData};
+};
+
 
 module.exports = {
-    quotesFunction,
-    averageFunction,
-    slippageFunction
+  getAllData,
+  getAverage,
+  getSlippage
 }
