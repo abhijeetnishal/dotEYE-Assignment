@@ -10,7 +10,7 @@ const cors = require("cors");
 
 const {getAllData, getAverage, getSlippage} = require('./controller/controller');
 
-app.use(cors());
+app.use(cors({origin: ['http://localhost:3000',]}));
 
 const io = new Server(server, {
   cors: {
@@ -49,4 +49,7 @@ server.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
 
-module.exports = app;
+//get request when server is live
+app.get('/',(req, res)=>{
+  res.status(200).json('Server is Live');
+})
