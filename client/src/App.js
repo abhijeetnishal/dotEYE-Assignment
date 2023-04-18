@@ -3,7 +3,11 @@ import io from "socket.io-client";
 import './App.css'
 
 const ENDPOINT = "https://doteyeserver.onrender.com";
-const socket = io(ENDPOINT);
+const socket = io(ENDPOINT, {
+  cors: {
+    origin: '*',
+  }
+});
 
 
 const Quotes = () => {

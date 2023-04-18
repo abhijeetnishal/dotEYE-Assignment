@@ -10,11 +10,11 @@ const cors = require("cors");
 
 const {getAllData, getAverage, getSlippage} = require('./controller/controller');
 
-app.use(cors({origin: ['http://localhost:3000',]}));
+app.use(cors({origin: ['https://doteyeassignment.vercel.app/','http://localhost:3000']}));
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", 'https://doteyeassignment.vercel.app/'],
     methods: ["GET", "POST","PUT","DELETE"],
   },
 });
